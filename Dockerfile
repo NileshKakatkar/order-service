@@ -1,6 +1,7 @@
 FROM golang:1.23-alpine AS builder
 WORKDIR /src/order-service
-COPY contracts/ /src/contracts/
+COPY shared/grpc/ /src/shared/grpc/
+COPY shared/events/ /src/shared/events/
 COPY order-service/go.mod ./
 RUN go mod download
 COPY order-service/ .

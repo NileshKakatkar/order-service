@@ -1,8 +1,9 @@
 FROM golang:1.23-alpine AS builder
-WORKDIR /src
-COPY go.mod ./
+WORKDIR /src/order-service
+COPY contracts/ /src/contracts/
+COPY order-service/go.mod ./
 RUN go mod download
-COPY . .
+COPY order-service/ .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/service ./cmd/order
 
 FROM alpine:3.21

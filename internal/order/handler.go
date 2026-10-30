@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/nilesh/order-service/internal/order/rpc"
 )
 
 type Handler struct {
@@ -16,6 +17,7 @@ type Handler struct {
 	ProductURL string
 	ServiceKey string
 	HTTP       *http.Client
+	RPC        *rpc.Clients
 }
 
 type createOrderInput struct {
@@ -30,6 +32,13 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	}
 	if input.ProductID == "" || input.Quantity < 1 || input.Quantity > 100 {
 		return fiber.NewError(400, "product_id and quantity between 1 and 100 are required")
+	}
+	user, err := h.RPC.UserDetails(c.Context(), c.Locals("userID").(string))
+	if err != nil {
+		return fiber.NewError(503, "user service unavailable")
+	}
+	if _, err = h.RPC.ProductDetails(c.Context(), input.ProductID); err != nil {
+		return fiber.NewError(404, "product not found")
 	}
 	reserveBody, _ := json.Marshal(fiber.Map{"quantity": input.Quantity})
 	request, err := http.NewRequestWithContext(c.Context(), http.MethodPost, fmt.Sprintf("%s/internal/v1/products/%s/reserve", h.ProductURL, input.ProductID), bytes.NewReader(reserveBody))
@@ -82,7 +91,7 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 		"event_id":     fmt.Sprintf("%s-%d", orderID, time.Now().UnixNano()),
 		"order_id":     orderID,
 		"user_id":      c.Locals("userID"),
-		"email":        c.Locals("email"),
+		"email":        user.Email,
 		"total_amount": total,
 		"currency":     "INR",
 	})

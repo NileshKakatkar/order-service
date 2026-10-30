@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/nilesh/order-service/internal/order/rpc"
 	"github.com/segmentio/kafka-go"
 	"net/http"
 	"strings"
@@ -17,7 +18,12 @@ func NewApp(cfg Config) (*fiber.App, error) {
 	}
 	app := fiber.New(fiber.Config{AppName: "ShopCore Order Service", BodyLimit: 1 << 20})
 	app.Use(recover.New())
-	handler := &Handler{DB: db, ProductURL: cfg.ProductServiceURL, ServiceKey: cfg.InternalServiceKey, HTTP: &http.Client{Timeout: 8 * time.Second}}
+	rpcClients, err := rpc.NewClients(cfg.UserGRPCAddress, cfg.ProductGRPCAddress)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	handler := &Handler{DB: db, ProductURL: cfg.ProductServiceURL, ServiceKey: cfg.InternalServiceKey, HTTP: &http.Client{Timeout: 8 * time.Second}, RPC: rpcClients}
 	app.Get("/health", func(c *fiber.Ctx) error { return c.JSON(fiber.Map{"status": "ok", "service": "order"}) })
 	secured := app.Group("/api/v1", authenticate(cfg.PublicKeyPath))
 	secured.Post("/orders", handler.Create)

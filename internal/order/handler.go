@@ -10,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/nilesh/order-service/internal/order/rpc"
+	orderevent "github.com/nilesh/shopcore-events/order"
 )
 
 type Handler struct {
@@ -87,15 +88,15 @@ func (h *Handler) Create(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.NewError(500, "could not save order items")
 	}
-	payload, _ := json.Marshal(fiber.Map{
-		"event_id":     fmt.Sprintf("%s-%d", orderID, time.Now().UnixNano()),
-		"order_id":     orderID,
-		"user_id":      c.Locals("userID"),
-		"email":        user.Email,
-		"total_amount": total,
-		"currency":     "INR",
+	payload, _ := json.Marshal(orderevent.Placed{
+		EventID:     fmt.Sprintf("%s-%d", orderID, time.Now().UnixNano()),
+		OrderID:     orderID,
+		UserID:      c.Locals("userID").(string),
+		Email:       user.Email,
+		TotalAmount: total,
+		Currency:    "INR",
 	})
-	_, err = tx.ExecContext(c.Context(), `INSERT INTO outbox_events(event_type,payload) VALUES('order.placed',$1)`, payload)
+	_, err = tx.ExecContext(c.Context(), `INSERT INTO outbox_events(event_type,payload) VALUES($1,$2)`, orderevent.PlacedType, payload)
 	if err != nil {
 		return fiber.NewError(500, "could not record order event")
 	}

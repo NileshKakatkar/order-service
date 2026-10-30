@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	orderevent "github.com/nilesh/shopcore-events/order"
 	"github.com/segmentio/kafka-go"
 	"time"
 )

@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/nilesh/order-service/internal/order/rpc"
+	orderevent "github.com/nilesh/shopcore-events/order"
 	"github.com/segmentio/kafka-go"
 	"net/http"
 	"strings"
@@ -29,7 +30,7 @@ func NewApp(cfg Config) (*fiber.App, error) {
 	secured.Post("/orders", handler.Create)
 	secured.Get("/orders", handler.List)
 	secured.Get("/orders/:id", handler.Get)
-	writer := &kafka.Writer{Addr: kafka.TCP(splitBrokers(cfg.KafkaBrokers)...), Topic: "shopcore.order-events", Balancer: &kafka.LeastBytes{}, Async: false}
+	writer := &kafka.Writer{Addr: kafka.TCP(splitBrokers(cfg.KafkaBrokers)...), Topic: orderevent.PlacedTopic, Balancer: &kafka.LeastBytes{}, Async: false}
 	dispatcher := &OutboxDispatcher{DB: db, Writer: writer}
 	ctx := context.Background()
 	go dispatcher.Run(ctx)
